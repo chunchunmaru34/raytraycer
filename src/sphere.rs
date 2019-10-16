@@ -21,31 +21,6 @@ impl Sphere {
         Self { center, radius, color }
     }
 
-    // pub fn ray_intersect(&self, ray: &Ray) -> bool {
-    //     let orig = &ray.origin;
-    //     let dir = &ray.direction;
-    //     // orig - A
-    //     // dir - B
-    //     // center - C
-    //     let ab = [(orig.x - dir.x).abs(), (orig.y - dir.y).abs(), (orig.z - dir.z).abs()];
-    //     let ac = [(orig.x - self.center.x).abs(), (orig.y - self.center.y).abs(), (orig.z - self.center.z).abs()];
-    //     let cb = [(dir.x - self.center.x).abs(), (dir.y - self.center.y).abs(), (dir.z - self.center.z).abs()];
-
-    //     let ab_module = (ab[0].powi(2) + ab[1].powi(2) + ab[2].powi(2)).sqrt();
-    //     let ac_module = (ac[0].powi(2) + ac[1].powi(2) + ac[2].powi(2)).sqrt();
-    //     let cb_module = (cb[0].powi(2) + cb[1].powi(2) + cb[2].powi(2)).sqrt();
-       
-    //     let cos_alpha = (ac_module.powi(2) + ab_module.powi(2) - cb_module.powi(2)) / (2.0 * ab_module * ac_module);
-    //     if cos_alpha < 0.0 {
-    //         return false;
-    //     }
-    //     let projection = ac_module * cos_alpha;
-
-    //     let distance = (ac_module.powi(2) - projection.powi(2)).abs().sqrt();
-        
-    //     return distance <= self.radius;
-    // }
-
     pub fn ray_intersect(&self, ray: &mut Ray) -> bool {
         let orig = &ray.origin;
         let dir = &ray.direction;
