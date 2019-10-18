@@ -111,9 +111,9 @@ impl Vec3 {
 
     pub fn plus(&self, vec: &Vec3) -> Self {
         Self {
-            x: self.x - vec.x,
-            y: self.y - vec.y,
-            z: self.z - vec.y,
+            x: self.x + vec.x,
+            y: self.y + vec.y,
+            z: self.z + vec.y,
         }
     }
 
@@ -128,5 +128,51 @@ impl Vec3 {
             y: self.y / del,
             z: self.z / del,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::geometry::{Vec3, Ray, Sphere};
+    #[test]
+    fn plus() {
+        let vec1 = Vec3::new(1., 1., 1.);
+        let vec2 = Vec3::new(4., 4., 4.);
+        let result = vec1.plus(&vec2);
+        
+        assert_eq!(result.x, 5.0);
+        assert_eq!(result.y, 5.0);
+        assert_eq!(result.z, 5.0);
+    }
+
+    #[test]
+    fn minus() {
+        let vec1 = Vec3::new(1., 1., 1.);
+        let vec2 = Vec3::new(4., 4., 4.);
+        let result = vec1.minus(&vec2);
+        
+        assert_eq!(result.x, -3.0);
+        assert_eq!(result.y, -3.0);
+        assert_eq!(result.z, -3.0);
+    }
+
+    #[test]
+    fn dot_product() {
+        let vec1 = Vec3::new(1., 2., 3.);
+        let vec2 = Vec3::new(2., 3., 4.);
+        let result = vec1.dot_product(&vec2);
+
+        assert_eq!(result, 20.0);
+    }
+
+    #[test]
+    fn ray_intersect() {
+        let orig = Vec3::new(0., 0., 0.);
+        let dir = Vec3::new(4., 0., 0.).normalize();
+        let mut ray = Ray::new(orig, dir, std::f32::MAX);
+
+        let sphere = Sphere::new(Vec3::new(8., 3., 0.), 4., (24, 24, 24));
+
+        assert!(sphere.ray_intersect(&mut ray));
     }
 }
