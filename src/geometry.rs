@@ -31,13 +31,13 @@ impl Sphere {
             return false;
         }
 
-        let projection = c.dot_product(&c) - tca * tca;
+        let projection_sqr = c.dot_product(&c) - tca * tca;
 
-        if projection > self.radius * self.radius {
+        if projection_sqr > self.radius * self.radius {
             return false;
         }
 
-        let thc = (self.radius * self.radius - projection).sqrt();
+        let thc = (self.radius * self.radius - projection_sqr).sqrt();
         let mut t0 = tca - thc;
         let t1 = tca + thc;
         
@@ -126,7 +126,7 @@ impl Vec3 {
     }
 
     pub fn length(&self) -> f32 {
-        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
+        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).abs().sqrt()
     }
 
     pub fn normalize(&self) -> Self {
