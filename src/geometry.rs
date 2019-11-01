@@ -101,6 +101,14 @@ impl Vec3 {
         }
     }
 
+    pub fn divide(&self, factor: f32) -> Self {
+        Self {
+            x: self.x / factor,
+            y: self.y / factor,
+            z: self.z / factor,
+        }
+    }
+
     pub fn minus(&self, vec: &Vec3) -> Self {
         Self {
             x: self.x - vec.x,
@@ -122,18 +130,36 @@ impl Vec3 {
     }
 
     pub fn normalize(&self) -> Self {
-        let del = 1. / self.length();
-        Self {
-            x: self.x / del,
-            y: self.y / del,
-            z: self.z / del,
-        }
+        self.divide(self.length())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::geometry::{Vec3, Ray, Sphere};
+
+    #[test]
+    fn length() {
+        let vec = Vec3::new(0., 3., 4.);
+        let length = vec.length();
+
+        assert_eq!(length, 5.);
+    }
+
+    #[test]
+    fn normalize() {
+        let vec = Vec3::new(0., 3., 4.);
+        let normal = vec.normalize();
+
+        let expected_x = 0.;
+        let expected_y = 3. / 5.;
+        let expected_z = 4. / 5.;
+
+        assert_eq!(normal.x, expected_x);
+        assert_eq!(normal.y, expected_y);
+        assert_eq!(normal.z, expected_z);
+    }
+
     #[test]
     fn plus() {
         let vec1 = Vec3::new(1., 1., 1.);
@@ -166,12 +192,32 @@ mod tests {
     }
 
     #[test]
+    fn scale() {
+        let vec = Vec3::new(3., 2., 4.);
+        let new_vec = vec.scale(2.);
+
+        assert_eq!(new_vec.x, 6.);
+        assert_eq!(new_vec.y, 4.);
+        assert_eq!(new_vec.z, 8.);
+    }
+
+     #[test]
+    fn divide() {
+        let vec = Vec3::new(3., 2., 4.);
+        let new_vec = vec.divide(2.);
+
+        assert_eq!(new_vec.x, 1.5);
+        assert_eq!(new_vec.y, 1.);
+        assert_eq!(new_vec.z, 2.);
+    }
+
+    #[test]
     fn ray_intersect() {
         let orig = Vec3::new(0., 0., 0.);
         let dir = Vec3::new(4., 0., 0.).normalize();
         let mut ray = Ray::new(orig, dir, std::f32::MAX);
 
-        let sphere = Sphere::new(Vec3::new(8., 3., 0.), 4., (24, 24, 24));
+        let sphere = Sphere::new(Vec3::new(4., 1., 0.), 2.5, (24, 24, 24));
 
         assert!(sphere.ray_intersect(&mut ray));
     }
