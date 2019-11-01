@@ -1,49 +1,82 @@
 extern crate image;
+extern crate num_cpus;
 
-mod sphere;
-use sphere::{Sphere, Point};
+mod geometry;
+mod camera;
+mod scene;
+
+use camera::{Camera};
+use geometry::{Sphere, Ray, Vec3, Light};
 use image::{ImageBuffer};
+use scene::{Scene};
+use std::time::{Instant};
+
+const HEIGHT: usize = 768;
+const WIDTH: usize = 1024;
+const FOV: f32 = 3.14 / 3.;
 
 fn main() {
-    render();
+    let mut scene = create_scene();
+    // loop {
+        let start = Instant::now();
+        render(&scene);
+        let duration = start.elapsed();
+        println!("{}", duration.as_millis());
+        scene.camera.move_by(&Vec3::new(1.0, -1.0, -1.0));
+    // }
 }
 
-fn render() {
-    let coordinates = Point::new(150.0, 400.0, 32.0);
-    let radius = 120.0;
-    let color = (12 as u8, 55 as u8, 44 as u8);
-    let test_sphere = Sphere::new(coordinates, radius, color);
-
-    let coordinates2 = Point::new(350.0, 200.0, 12.0);
-    let radius2 = 76.0;
-    let color2 = (225 as u8, 12 as u8, 225 as u8);
-    let test_sphere2 = Sphere::new(coordinates2, radius2, color2);
-
-
-    let img = ImageBuffer::from_fn(512, 512, |x, y| {
-        let direction = Point::new(x as f32, y as f32, 100.0);
-        let origin = Point::new(x as f32, y as f32, 0.);
-        let mut pixel = image::Rgb([185, 185, 185]);
-
-        for sphere in vec![&test_sphere, &test_sphere2] {
-            if sphere.ray_intersect(&origin, &direction) {
-                pixel = image::Rgb([sphere.color.0, sphere.color.1, sphere.color.2])
-            }
-        }
-
-        return pixel;
+fn render(scene: &Scene) {
+    let img = ImageBuffer::from_fn(WIDTH as u32, HEIGHT as u32, |x, y| {
+        render_pixel(x as f32, y as f32, scene)
     });
 
     img.save("test.png").unwrap();
 }
 
-struct Light {
-    pub position: Point,
-    pub intensity: f32,
+fn render_pixel(x: f32, y: f32, scene: &Scene) -> image::Rgb<u8> {
+    let direction = Vec3::new(
+        (x + 0.5) - WIDTH as f32 / 2.,
+        -(y + 0.5) + HEIGHT as f32 / 2.,
+        -(HEIGHT as f32) / (2. * (FOV / 2.).tan())
+    ).normalize();
+
+    let origin = Vec3::new(scene.camera.position.x, scene.camera.position.y, scene.camera.position.z);
+    let mut ray = Ray::new(origin, direction, std::f32::MAX);
+
+    let pixel = cast_ray(&mut ray, &scene.objects);
+
+    return pixel;
 }
 
-impl Light {
-    pub fn new(position: Point, intensity: f32) -> Self {
-        Self { position, intensity }
+fn cast_ray(ray: &mut Ray, scene_objects: &Vec<Sphere>) -> image::Rgb<u8> {
+    let mut pixel = image::Rgb([185, 185, 185]);
+
+    for sphere in scene_objects {
+        if sphere.ray_intersect(ray) {
+            pixel = image::Rgb([sphere.color.0, sphere.color.1, sphere.color.2])
+        }
+    }
+
+    return pixel;
+}
+
+fn create_scene() -> Scene {
+    let camera = Camera::new(Vec3::new(0., 0., 0.,));
+
+    let coordinates = Vec3::new(-3.0, 0., -16.0);
+    let dark_green = (12 as u8, 55 as u8, 44 as u8);
+    let test_sphere = Sphere::new(coordinates, 2.0, dark_green);
+
+    let coordinates2 = Vec3::new(4.0, 4., -12.0);
+    let metallic_red = (170 as u8, 84 as u8, 84 as u8);
+    let test_sphere2 = Sphere::new(coordinates2, 3.0, metallic_red);
+
+    let light = Light::new(Vec3::new(500., 500., 150.), 20.);
+
+    Scene {
+        lights: vec![light],
+        camera,
+        objects: vec![test_sphere, test_sphere2]
     }
 }
