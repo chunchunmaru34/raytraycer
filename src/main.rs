@@ -1,14 +1,16 @@
 extern crate image;
-extern crate num_cpus;
 
 mod geometry;
-mod camera;
 mod scene;
 
-use camera::{Camera};
-use geometry::{Sphere, Ray, Vec3, Light};
-use image::{ImageBuffer};
+use geometry::sphere::{Sphere};
+use geometry::ray::{Ray};
+use geometry::vec3::{Vec3};
+use scene::light::{Light};
+use scene::camera::{Camera};
 use scene::{Scene};
+
+use image::{ImageBuffer};
 use std::time::{Instant};
 
 const HEIGHT: usize = 768;
