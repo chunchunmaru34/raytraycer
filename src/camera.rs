@@ -15,3 +15,21 @@ impl Camera {
         self.position = self.position.plus(distance);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::camera::Camera;
+    use crate::geometry::Vec3;
+
+    #[test]
+    fn move_by() {
+        let mut camera = Camera::new(Vec3::new(0., 0., 0.));
+
+        camera.move_by(&Vec3::new(1., 2., 3.));
+        camera.move_by(&Vec3::new(3., 2., 2.));
+
+        assert_eq!(camera.position.x, 4.);
+        assert_eq!(camera.position.y, 4.);
+        assert_eq!(camera.position.z, 5.);
+    }
+}

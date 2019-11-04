@@ -1,5 +1,6 @@
 extern crate image;
 extern crate num_cpus;
+extern crate sdl2;
 
 mod geometry;
 mod camera;
@@ -7,34 +8,99 @@ mod scene;
 
 use camera::{Camera};
 use geometry::{Sphere, Ray, Vec3, Light};
-use image::{ImageBuffer};
 use scene::{Scene};
-use std::time::{Instant};
+use std::time::{Instant, Duration};
 
-const HEIGHT: usize = 900;
-const WIDTH: usize = 1600;
+use sdl2::pixels::Color;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+
+const HEIGHT: usize = 720;
+const WIDTH: usize = 1280;
 const FOV: f32 = 3.14 / 3.;
 
-fn main() {
+fn main() -> Result<(), String> {
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+
+    let window = video_subsystem.window("rust-sdl2 demo: Video", WIDTH as u32, HEIGHT as u32)
+        .position_centered()
+        .opengl()
+        .build()
+        .map_err(|e| e.to_string())
+        .unwrap();
+
+    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string()).unwrap();
+
+    canvas.set_draw_color(Color::RGB(0, 0, 0));
+    canvas.clear();
+    canvas.present();
+    let mut event_pump = sdl_context.event_pump().unwrap();
+
     let mut scene = create_scene();
-    // loop {
+
+    'running: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                    break 'running
+                },
+                Event::KeyDown { keycode: Some(Keycode::D), .. } => {
+                    scene.camera.move_by(&Vec3::new(1., 0., 0.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::A), .. } => {
+                    scene.camera.move_by(&Vec3::new(-1., 0., 0.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::W), .. } => {
+                    scene.camera.move_by(&Vec3::new(0., 1., 0.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::S), .. } => {
+                    scene.camera.move_by(&Vec3::new(0., -1., 0.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::Z), .. } => {
+                    scene.camera.move_by(&Vec3::new(0., 0., 1.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::X), .. } => {
+                    scene.camera.move_by(&Vec3::new(0., 0., -1.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::KpPlus), .. } => {
+                    let old_intensity = scene.lights[0].intensity;
+                    scene.lights[0].set_intensity(old_intensity + 0.1);
+                },
+                Event::KeyDown { keycode: Some(Keycode::KpMinus), .. } => {
+                    let old_intensity = scene.lights[0].intensity;
+                    scene.lights[0].set_intensity(old_intensity - 0.1);
+                },
+                _ => {}
+            }
+        }
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        
         let start = Instant::now();
-        // scene.camera.move_by(&Vec3::new(10.01, 5.01, -0.01));
-        render(&scene);
+
+        render(&scene, &mut canvas);
         let duration = start.elapsed();
-        println!("{}", duration.as_millis());
-    // }
+
+        println!("fps:{0:.2}, time per frame:{1}ms", 1000. / duration.as_millis() as f32, duration.as_millis());
+        println!("x:{}, y:{}, z:{}", scene.camera.position.x, scene.camera.position.y, scene.camera.position.z);
+    }
+
+    Ok(())
 }
 
-fn render(scene: &Scene) {
-    let img = ImageBuffer::from_fn(WIDTH as u32, HEIGHT as u32, |x, y| {
-        render_pixel(x as f32, y as f32, scene)
-    });
+fn render(scene: &Scene, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
+    for y in 0..HEIGHT {
+        for x in 0..WIDTH {
+            let color = render_pixel(x as f32, y as f32, scene);
+            canvas.set_draw_color(Color::RGB(color.0, color.1, color.2));
+            canvas.draw_point(sdl2::rect::Point::new(x as i32, y as i32)).unwrap();
+        }
+    }
 
-    img.save("test.png").unwrap();
+    canvas.present();
 }
 
-fn render_pixel(x: f32, y: f32, scene: &Scene) -> image::Rgb<u8> {
+fn render_pixel(x: f32, y: f32, scene: &Scene) -> (u8, u8, u8) {
     let direction = Vec3::new(
         (x + 0.5) - WIDTH as f32 / 2.,
         -(y + 0.5) + HEIGHT as f32 / 2.,
@@ -49,7 +115,7 @@ fn render_pixel(x: f32, y: f32, scene: &Scene) -> image::Rgb<u8> {
     return pixel;
 }
 
-fn cast_ray(ray: &mut Ray, scene: &Scene) -> image::Rgb<u8> {
+fn cast_ray(ray: &mut Ray, scene: &Scene) -> (u8, u8, u8) {
     let mut pixel = Vec3::new(185., 185., 185.);
 
     for sphere in &scene.objects {
@@ -58,11 +124,15 @@ fn cast_ray(ray: &mut Ray, scene: &Scene) -> image::Rgb<u8> {
             let diffuse_light_intensity = get_light_intensity(ray, sphere, &scene.lights);
             pixel = pixel.scale(diffuse_light_intensity);
 
-            return image::Rgb([pixel.x as u8, pixel.y as u8, pixel.z as u8]);
+            let r = if pixel.x > 255. { 255. } else if pixel.x < 0. { 0. } else { pixel.x };
+            let g = if pixel.y > 255. { 255. } else if pixel.y < 0. { 0. } else { pixel.y };
+            let b = if pixel.z > 255. { 255. } else if pixel.z < 0. { 0. } else { pixel.z };
+
+            return (r as u8, g as u8, b as u8);
         }
     }
 
-    return image::Rgb([pixel.x as u8, pixel.y as u8, pixel.z as u8]);
+    return (pixel.x as u8, pixel.y as u8, pixel.z as u8);
 }
 
 fn get_light_intensity(ray: &Ray, sphere: &Sphere, lights: &Vec<Light>) -> f32 {

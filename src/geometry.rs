@@ -64,6 +64,10 @@ impl Light {
     pub fn new(position: Vec3, intensity: f32) -> Self {
         Self { position, intensity }
     }
+
+    pub fn set_intensity(&mut self, intensity: f32) {
+        self.intensity = intensity;
+    }
 }
 
 pub struct Ray {
@@ -113,7 +117,7 @@ impl Vec3 {
         Self {
             x: self.x - vec.x,
             y: self.y - vec.y,
-            z: self.z - vec.y,
+            z: self.z - vec.z,
         }
     }
 
@@ -121,7 +125,7 @@ impl Vec3 {
         Self {
             x: self.x + vec.x,
             y: self.y + vec.y,
-            z: self.z + vec.y,
+            z: self.z + vec.z,
         }
     }
 
