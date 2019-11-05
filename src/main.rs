@@ -81,13 +81,22 @@ fn main() -> Result<(), String> {
                     }
                 },
                 Event::KeyDown { keycode: Some(Keycode::Kp4), .. } => {
-                    println!("heya");
-                    scene.camera.rotate_by(&Vec3::new(1., 0., 0.));
-                    println!("{}", scene.camera.rotation_matrix[0][0]);
+                    scene.camera.rotate_by(&Vec3::new(0., 1., 0.));
                 },
                 Event::KeyDown { keycode: Some(Keycode::Kp6), .. } => {
+                    scene.camera.rotate_by(&Vec3::new(0., -1., 0.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::Kp8), .. } => {
+                    scene.camera.rotate_by(&Vec3::new(0., 0., 1.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::Kp2), .. } => {
+                    scene.camera.rotate_by(&Vec3::new(0., 0., -1.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::Kp7), .. } => {
+                    scene.camera.rotate_by(&Vec3::new(1., 0., 0.));
+                },
+                Event::KeyDown { keycode: Some(Keycode::Kp9), .. } => {
                     scene.camera.rotate_by(&Vec3::new(-1., 0., 0.));
-                    println!("{}", scene.camera.rotation_matrix[2][1]);
                 },
                 _ => {}
             }
