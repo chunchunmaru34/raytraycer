@@ -33,7 +33,7 @@ impl Vec3 {
         Self {
             x: self.x - vec.x,
             y: self.y - vec.y,
-            z: self.z - vec.y,
+            z: self.z - vec.z,
         }
     }
 
@@ -41,7 +41,7 @@ impl Vec3 {
         Self {
             x: self.x + vec.x,
             y: self.y + vec.y,
-            z: self.z + vec.y,
+            z: self.z + vec.z,
         }
     }
 
@@ -83,23 +83,23 @@ mod tests {
     #[test]
     fn plus() {
         let vec1 = Vec3::new(1., 1., 1.);
-        let vec2 = Vec3::new(4., 4., 4.);
+        let vec2 = Vec3::new(1., 2., 3.);
         let result = vec1.plus(&vec2);
         
-        assert_eq!(result.x, 5.0);
-        assert_eq!(result.y, 5.0);
-        assert_eq!(result.z, 5.0);
+        assert_eq!(result.x, 2.0);
+        assert_eq!(result.y, 3.0);
+        assert_eq!(result.z, 4.0);
     }
 
     #[test]
     fn minus() {
         let vec1 = Vec3::new(1., 1., 1.);
-        let vec2 = Vec3::new(4., 4., 4.);
+        let vec2 = Vec3::new(1., 2., 3.);
         let result = vec1.minus(&vec2);
         
-        assert_eq!(result.x, -3.0);
-        assert_eq!(result.y, -3.0);
-        assert_eq!(result.z, -3.0);
+        assert_eq!(result.x, 0.0);
+        assert_eq!(result.y, -1.0);
+        assert_eq!(result.z, -2.0);
     }
 
     #[test]

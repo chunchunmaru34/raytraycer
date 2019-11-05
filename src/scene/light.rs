@@ -9,4 +9,8 @@ impl Light {
     pub fn new(position: Vec3, intensity: f32) -> Self {
         Self { position, intensity }
     }
+
+    pub fn set_intensity(&mut self, intensity: f32) {
+        self.intensity = intensity;
+    }
 }
