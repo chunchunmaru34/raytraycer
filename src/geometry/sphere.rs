@@ -1,15 +1,16 @@
 use super::vec3::{Vec3};
 use super::ray::{Ray};
+use super::material::Material;
 
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
-    pub color: (u8, u8, u8),
+    pub material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, color: (u8, u8, u8)) -> Self {
-        Self { center, radius, color }
+    pub fn new(center: Vec3, radius: f32, material: Material) -> Self {
+        Self { center, radius, material }
     }
 
     pub fn ray_intersect(&self, ray: &mut Ray) -> bool {
@@ -51,6 +52,7 @@ mod tests {
     use crate::geometry::sphere::{Sphere};
     use crate::geometry::vec3::{Vec3};
     use crate::geometry::ray::{Ray};
+    use crate::geometry::material::Material;
 
     #[test]
     fn ray_intersect() {
@@ -58,7 +60,9 @@ mod tests {
         let dir = Vec3::new(4., 0., 0.).normalize();
         let mut ray = Ray::new(orig, dir, std::f32::MAX);
 
-        let sphere = Sphere::new(Vec3::new(4., 1., 0.), 2.5, (24, 24, 24));
+        let material = Material { color: Vec3::new(24., 24., 24.), specular_exponent: 1., albedo: (1., 1.) };
+
+        let sphere = Sphere::new(Vec3::new(4., 1., 0.), 2.5, material);
 
         assert!(sphere.ray_intersect(&mut ray));
     }
