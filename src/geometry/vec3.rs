@@ -52,6 +52,19 @@ impl Vec3 {
     pub fn normalize(&self) -> Self {
         self.divide(self.length())
     }
+
+    pub fn scale_by_matrix(&self, matrix: [[f32; 3]; 3]) -> Self {
+        let mut result = [0., 0., 0.];
+        let current = [self.x, self.y, self.z];
+
+        for i in 0..3 {
+            for j in 0..3 {
+                result[i] += current[j] * matrix[i][j];
+            }
+        }
+
+        Self { x: result[0], y: result[1], z: result[2] }
+    }
 }
 
 #[cfg(test)]
@@ -129,5 +142,20 @@ mod tests {
         assert_eq!(new_vec.x, 1.5);
         assert_eq!(new_vec.y, 1.);
         assert_eq!(new_vec.z, 2.);
+    }
+
+    #[test]
+    fn scale_by_matrix() {
+        let vec = Vec3::new(2., 3., 4.);
+        let matrix = [
+            [1., 2., 3.],
+            [3., 2., 1.],
+            [4., 1., 3.],
+        ];
+        let result = vec.scale_by_matrix(matrix);
+
+        assert_eq!(result.x, 20.);
+        assert_eq!(result.y, 16.);
+        assert_eq!(result.z, 23.);
     }
 }
