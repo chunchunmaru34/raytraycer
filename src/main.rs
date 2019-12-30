@@ -198,13 +198,21 @@ fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene, depth: usize) -> (
     let hit_normal = hit_point.minus(&sphere.center).normalize();
 
     let reflect_direction = reflect(&ray.direction, &hit_normal).normalize();
+    let refract_direction = refract(&ray.direction, &hit_normal, sphere.material.refractive_index, 1.).normalize();
     let reflect_origin = if reflect_direction.dot_product(&hit_normal) < 0. {
         hit_point.minus(&hit_normal.scale(1e-3))
     } else {
         hit_point.plus(&hit_normal.scale(1e-3))
     };
+    let refract_origin = if refract_direction.dot_product(&hit_normal) < 0. {
+        hit_point.minus(&hit_normal.scale(1e-3))
+    } else {
+        hit_point.plus(&hit_normal.scale(1e-3))
+    };
     let mut reflected_ray = Ray::new(reflect_origin, reflect_direction, std::f32::MAX);
+    let mut refracted_ray = Ray::new(refract_origin, refract_direction, std::f32::MAX);
     let reflect_color = cast_ray(&mut reflected_ray, &scene, depth + 1);
+    let refract_color = cast_ray(&mut refracted_ray, &scene, depth + 1);
 
     let mut diffuse_light_intensity = 0.;
     let mut specular_light_intensity = 0.;
@@ -231,13 +239,30 @@ fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene, depth: usize) -> (
     let pixel = sphere.material.color
         .scale(diffuse_light_intensity * sphere.material.albedo.0)
         .plus(&Vec3::new(255., 255., 255.).scale(specular_light_intensity * sphere.material.albedo.1))
-        .plus(&Vec3::new(reflect_color.0 as f32, reflect_color.1 as f32, reflect_color.2 as f32).scale(sphere.material.albedo.2));
+        .plus(&Vec3::new(reflect_color.0 as f32, reflect_color.1 as f32, reflect_color.2 as f32).scale(sphere.material.albedo.2))
+        .plus(&Vec3::new(refract_color.0 as f32, refract_color.1 as f32, refract_color.2 as f32).scale(sphere.material.albedo.3));
 
     utils::limit_color(pixel)
 }
 
 fn reflect(light: &Vec3, normal: &Vec3) -> Vec3 {
     light.minus(&normal.scale(2. * light.dot_product(normal)))
+}
+
+fn refract(light: &Vec3, normal: &Vec3, eta_t: f32, eta_i: f32)  -> Vec3 {
+    let cosi = -f32::max(-1., f32::min(1., light.dot_product(&normal)));
+    if cosi < 0. {
+        return refract(light, &normal.scale(-1.), eta_i, eta_t);
+    };
+
+    let eta = eta_i / eta_t;
+    let k = 1. - eta.powi(2) * (1. - cosi.powi(2));
+
+    if k < 0. {
+        Vec3::new(1., 0., 0.)
+    } else {
+        light.scale(eta).plus(&normal.scale(eta * cosi - k.sqrt()))
+    }
 }
 
 fn create_scene() -> Scene {
@@ -251,7 +276,7 @@ fn create_scene() -> Scene {
     let test_sphere2 = Sphere::new(
         Vec3::new(-1.0, -1.5, -12.0),
         2.0,
-        material_factory::get_mirror()
+        material_factory::get_glass()
     );
     let test_sphere3 = Sphere::new(
         Vec3::new(1.5, -0.5, -18.0),
