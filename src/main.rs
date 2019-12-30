@@ -13,6 +13,7 @@ use geometry::material::Material;
 use scene::light::{Light};
 use scene::camera::{Camera};
 use scene::{Scene};
+use utils::material_factory;
 
 use std::time::{Instant, Duration};
 
@@ -227,28 +228,25 @@ fn reflect(light: &Vec3, normal: &Vec3) -> Vec3 {
 fn create_scene() -> Scene {
     let camera = Camera::new(Vec3::new(0., 0., 0.,));
 
-    let coordinates = Vec3::new(-3.0, 0., -16.0);
-    let dark_green = Vec3::new(12., 55., 44.);
-    let dark_green_mat = Material { color: dark_green, albedo: (0.6, 0.3), specular_exponent: 50., };
-    let test_sphere = Sphere::new(coordinates, 2.0, dark_green_mat);
-
-    let coordinates2 = Vec3::new(-1.0, -1.5, -12.0);
-    let metallic_red = Vec3::new(75., 25., 24.);
-    let metallic_red_mat = Material { color: metallic_red, albedo: (0.9, 0.1), specular_exponent: 10., };
-    let test_sphere2 = Sphere::new(coordinates2, 2.0, metallic_red_mat);
-
-    let coordinates3 = Vec3::new(1.5, -0.5, -18.0);
-    let test_sphere3 = Sphere::new(
-        coordinates3,
-        3.0,
-        Material { color: Vec3::new(75., 25., 24.), albedo: (0.9, 0.1), specular_exponent: 10., }
+    let test_sphere = Sphere::new(
+        Vec3::new(-3.0, 0., -16.0),
+        2.0,
+        material_factory::get_dark_green_plastic()
     );
-
-    let coordinates4 = Vec3::new(7., 5., -18.0);
+    let test_sphere2 = Sphere::new(
+        Vec3::new(-1.0, -1.5, -12.0),
+        2.0,
+        material_factory::get_red_rubber()
+    );
+    let test_sphere3 = Sphere::new(
+        Vec3::new(1.5, -0.5, -18.0),
+        3.0,
+        material_factory::get_red_rubber(),
+    );
     let test_sphere4 = Sphere::new(
-        coordinates4,
+        Vec3::new(7., 5., -18.0),
         4.0,
-        Material { color: Vec3::new(12., 55., 44.), albedo: (0.6, 0.3), specular_exponent: 50., }
+        material_factory::get_dark_green_plastic(),
     );
 
     let mut objects = vec![test_sphere, test_sphere2, test_sphere3, test_sphere4]; 
