@@ -65,6 +65,10 @@ impl Vec3 {
 
         Self { x: result[0], y: result[1], z: result[2] }
     }
+
+    pub fn clone(&self) -> Self {
+        Self::new(self.x, self.y, self.z)
+    }
 }
 
 #[cfg(test)]

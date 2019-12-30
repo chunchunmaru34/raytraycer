@@ -22,8 +22,8 @@ use image::{ImageBuffer};
 // use sdl2::event::Event;
 // use sdl2::keyboard::Keycode;
 
-const HEIGHT: usize = 720;
-const WIDTH: usize = 1280;
+const HEIGHT: usize = 1080;
+const WIDTH: usize = 1920;
 const FOV: f32 = 3.14 / 3.;
 
 fn main() -> Result<(), String> {
@@ -170,22 +170,43 @@ fn render_pixel(x: f32, y: f32, scene: &Scene) -> (u8, u8, u8) {
 fn cast_ray(ray: &mut Ray, scene: &Scene) -> (u8, u8, u8) {
     for sphere in &scene.objects {
         if sphere.ray_intersect(ray) {
-            return get_pixel_color(ray, sphere, &scene.lights);
+            return get_pixel_color(ray, sphere, &scene);
         }
     }
 
     (185, 185, 185)
 }
 
-fn get_pixel_color(ray: &Ray, sphere: &Sphere, lights: &Vec<Light>) -> (u8, u8, u8) {
+fn scene_intersects(ray: &mut Ray, scene: &Scene) -> bool {
+    for sphere in &scene.objects {
+        if sphere.ray_intersect(ray) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene) -> (u8, u8, u8) {
     let hit_point = ray.origin.plus(&ray.direction.scale(ray.t));
     let hit_normal = hit_point.minus(&sphere.center).normalize();
 
     let mut diffuse_light_intensity = 0.;
     let mut specular_light_intensity = 0.;
 
-    for light in lights {
+    for light in &scene.lights {
         let light_direction = light.position.minus(&hit_point).normalize();
+
+        let shadow_origin = if light_direction.dot_product(&hit_normal) < 0. {
+            hit_point.minus(&hit_normal.scale(1e-3))
+        } else {
+            hit_point.plus(&hit_normal.scale(1e-3))
+        };
+        let mut bounced_light_ray = Ray::new(shadow_origin, light_direction.clone(), std::f32::MAX);
+
+        if scene_intersects(&mut bounced_light_ray, scene) {
+            continue;
+        };
 
         diffuse_light_intensity += light.intensity * f32::max(0., light_direction.dot_product(&hit_normal));
         specular_light_intensity += f32::max(0., reflect(&light_direction, &hit_normal).dot_product(&ray.direction))
