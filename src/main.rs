@@ -9,7 +9,6 @@ mod utils;
 use geometry::sphere::{Sphere};
 use geometry::ray::{Ray};
 use geometry::vec3::{Vec3};
-use geometry::material::Material;
 use scene::light::{Light};
 use scene::camera::{Camera};
 use scene::{Scene};
@@ -26,6 +25,8 @@ use image::{ImageBuffer};
 const HEIGHT: usize = 1080;
 const WIDTH: usize = 1920;
 const FOV: f32 = 3.14 / 3.;
+const BACKGROUND_COLOR: (u8, u8, u8) = (50, 178, 203);
+const MAX_REFLECTIONS_ALLOWED: usize = 4;
 
 fn main() -> Result<(), String> {
     run_static();
@@ -163,19 +164,23 @@ fn render_pixel(x: f32, y: f32, scene: &Scene) -> (u8, u8, u8) {
     let origin = Vec3::new(scene.camera.position.x, scene.camera.position.y, scene.camera.position.z);
     let mut ray = Ray::new(origin, direction, std::f32::MAX);
 
-    let pixel = cast_ray(&mut ray, scene);
+    let pixel = cast_ray(&mut ray, scene, 0);
 
     return pixel;
 }
 
-fn cast_ray(ray: &mut Ray, scene: &Scene) -> (u8, u8, u8) {
+fn cast_ray(ray: &mut Ray, scene: &Scene, depth: usize) -> (u8, u8, u8) {
+    if depth > MAX_REFLECTIONS_ALLOWED {
+        return BACKGROUND_COLOR;
+    }
+
     for sphere in &scene.objects {
         if sphere.ray_intersect(ray) {
-            return get_pixel_color(ray, sphere, &scene);
+            return get_pixel_color(ray, sphere, &scene, depth);
         }
     }
 
-    (185, 185, 185)
+    BACKGROUND_COLOR
 }
 
 fn scene_intersects(ray: &mut Ray, scene: &Scene) -> bool {
@@ -188,9 +193,18 @@ fn scene_intersects(ray: &mut Ray, scene: &Scene) -> bool {
     false
 }
 
-fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene) -> (u8, u8, u8) {
+fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene, depth: usize) -> (u8, u8, u8) {
     let hit_point = ray.origin.plus(&ray.direction.scale(ray.t));
     let hit_normal = hit_point.minus(&sphere.center).normalize();
+
+    let reflect_direction = reflect(&ray.direction, &hit_normal).normalize();
+    let reflect_origin = if reflect_direction.dot_product(&hit_normal) < 0. {
+        hit_point.minus(&hit_normal.scale(1e-3))
+    } else {
+        hit_point.plus(&hit_normal.scale(1e-3))
+    };
+    let mut reflected_ray = Ray::new(reflect_origin, reflect_direction, std::f32::MAX);
+    let reflect_color = cast_ray(&mut reflected_ray, &scene, depth + 1);
 
     let mut diffuse_light_intensity = 0.;
     let mut specular_light_intensity = 0.;
@@ -216,7 +230,8 @@ fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene) -> (u8, u8, u8) {
 
     let pixel = sphere.material.color
         .scale(diffuse_light_intensity * sphere.material.albedo.0)
-        .plus(&Vec3::new(255., 255., 255.).scale(specular_light_intensity * sphere.material.albedo.1));
+        .plus(&Vec3::new(255., 255., 255.).scale(specular_light_intensity * sphere.material.albedo.1))
+        .plus(&Vec3::new(reflect_color.0 as f32, reflect_color.1 as f32, reflect_color.2 as f32).scale(sphere.material.albedo.2));
 
     utils::limit_color(pixel)
 }
@@ -236,7 +251,7 @@ fn create_scene() -> Scene {
     let test_sphere2 = Sphere::new(
         Vec3::new(-1.0, -1.5, -12.0),
         2.0,
-        material_factory::get_red_rubber()
+        material_factory::get_mirror()
     );
     let test_sphere3 = Sphere::new(
         Vec3::new(1.5, -0.5, -18.0),
@@ -246,7 +261,7 @@ fn create_scene() -> Scene {
     let test_sphere4 = Sphere::new(
         Vec3::new(7., 5., -18.0),
         4.0,
-        material_factory::get_dark_green_plastic(),
+        material_factory::get_mirror(),
     );
 
     let mut objects = vec![test_sphere, test_sphere2, test_sphere3, test_sphere4]; 

@@ -3,8 +3,8 @@ use crate::geometry::vec3::{Vec3};
 
 pub fn get_mirror() -> Material {
   Material { 
-    color: Vec3::new(0., 10., 0.8),
-    albedo: (1., 1., 1.),
+    color: Vec3::new(255., 255., 255.),
+    albedo: (0., 10., 0.8),
     specular_exponent: 1425.
   }
 }
