@@ -1,6 +1,6 @@
-use super::vec3::{Vec3};
-use super::ray::{Ray};
 use super::material::Material;
+use super::ray::Ray;
+use super::vec3::Vec3;
 
 pub struct Sphere {
     pub center: Vec3,
@@ -10,7 +10,11 @@ pub struct Sphere {
 
 impl Sphere {
     pub fn new(center: Vec3, radius: f32, material: Material) -> Self {
-        Self { center, radius, material }
+        Self {
+            center,
+            radius,
+            material,
+        }
     }
 
     pub fn ray_intersect(&self, ray: &mut Ray) -> bool {
@@ -32,7 +36,6 @@ impl Sphere {
         let thc = (self.radius * self.radius - projection).sqrt();
         let mut t0 = tca - thc;
         let t1 = tca + thc;
-        
         if t0 < 0. {
             t0 = t1;
         }
@@ -49,10 +52,11 @@ impl Sphere {
 
 #[cfg(test)]
 mod tests {
-    use crate::geometry::sphere::{Sphere};
-    use crate::geometry::vec3::{Vec3};
-    use crate::geometry::ray::{Ray};
     use crate::geometry::material::Material;
+    use crate::geometry::ray::Ray;
+    use crate::geometry::sphere::Sphere;
+    use crate::geometry::vec3::Vec3;
+    use crate::utils::rgb::RGB;
 
     #[test]
     fn ray_intersect() {
@@ -60,7 +64,12 @@ mod tests {
         let dir = Vec3::new(4., 0., 0.).normalize();
         let mut ray = Ray::new(orig, dir, std::f32::MAX);
 
-        let material = Material { color: Vec3::new(24., 24., 24.), specular_exponent: 1., albedo: (1., 1.) };
+        let material = Material {
+            color: RGB::new(24, 24, 24),
+            specular_exponent: 1.,
+            albedo: (1., 1., 1., 1.),
+            refractive_index: 0.,
+        };
 
         let sphere = Sphere::new(Vec3::new(4., 1., 0.), 2.5, material);
 
