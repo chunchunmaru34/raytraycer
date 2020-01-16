@@ -2,6 +2,7 @@ use crate::geometry::ray::Ray;
 use crate::geometry::sphere::Sphere;
 use crate::geometry::vec3::Vec3;
 use crate::scene::Scene;
+use crate::utils;
 use crate::utils::rgb::RGB;
 
 pub fn render_pixel(x: f32, y: f32, scene: &Scene) -> RGB {
@@ -29,7 +30,19 @@ fn cast_ray(ray: &mut Ray, scene: &Scene, depth: usize) -> RGB {
         return scene.options.background_color.clone();
     }
 
-    for sphere in &scene.objects {
+    let mut pairs: Vec<(f32, usize)> = scene
+        .objects
+        .iter()
+        .enumerate()
+        .map(|pair| (pair.1.center.minus(&ray.origin).length(), pair.0))
+        .collect();
+    pairs.sort_by(|pair1, pair2| pair1.0.partial_cmp(&pair2.0).unwrap());
+
+    let order: Vec<usize> = pairs.iter().map(|pair| pair.1).collect();
+
+    for index in order {
+        let sphere = &scene.objects.get(index).unwrap();
+
         if sphere.ray_intersect(ray) {
             return get_pixel_color(ray, sphere, scene, depth);
         }
@@ -60,18 +73,11 @@ fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene, depth: usize) -> R
         1.,
     )
     .normalize();
-    let reflect_origin = if reflect_direction.dot_product(&hit_normal) < 0. {
-        hit_point.minus(&hit_normal.scale(1e-3))
-    } else {
-        hit_point.plus(&hit_normal.scale(1e-3))
-    };
-    let refract_origin = if refract_direction.dot_product(&hit_normal) < 0. {
-        hit_point.minus(&hit_normal.scale(1e-3))
-    } else {
-        hit_point.plus(&hit_normal.scale(1e-3))
-    };
+    let reflect_origin = utils::move_from_surface(&reflect_direction, &hit_normal, &hit_point);
+    let refract_origin = utils::move_from_surface(&refract_direction, &hit_normal, &hit_point);
     let mut reflected_ray = Ray::new(reflect_origin, reflect_direction, std::f32::MAX);
     let mut refracted_ray = Ray::new(refract_origin, refract_direction, std::f32::MAX);
+
     let reflect_color = cast_ray(&mut reflected_ray, scene, depth + 1);
     let refract_color = cast_ray(&mut refracted_ray, scene, depth + 1);
 
@@ -80,12 +86,7 @@ fn get_pixel_color(ray: &Ray, sphere: &Sphere, scene: &Scene, depth: usize) -> R
 
     for light in &scene.lights {
         let light_direction = light.position.minus(&hit_point).normalize();
-
-        let shadow_origin = if light_direction.dot_product(&hit_normal) < 0. {
-            hit_point.minus(&hit_normal.scale(1e-3))
-        } else {
-            hit_point.plus(&hit_normal.scale(1e-3))
-        };
+        let shadow_origin = utils::move_from_surface(&light_direction, &hit_normal, &hit_point);
         let mut bounced_light_ray = Ray::new(shadow_origin, light_direction.clone(), std::f32::MAX);
 
         if scene_intersects(&mut bounced_light_ray, scene) {

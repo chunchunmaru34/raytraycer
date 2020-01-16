@@ -50,28 +50,29 @@ fn render_static(scene: &Scene) {
 fn create_scene() -> Scene {
     let camera = Camera::new(Vec3::new(0., 0., 0.));
 
-    let test_sphere = Sphere::new(
-        Vec3::new(-3.0, 0., -16.0),
-        2.0,
-        material_factory::get_dark_green_plastic(),
-    );
-    let test_sphere2 = Sphere::new(
-        Vec3::new(-1.0, -1.5, -12.0),
-        2.0,
-        material_factory::get_glass(),
-    );
-    let test_sphere3 = Sphere::new(
-        Vec3::new(1.5, -0.5, -18.0),
-        3.0,
-        material_factory::get_red_rubber(),
-    );
-    let test_sphere4 = Sphere::new(
-        Vec3::new(7., 5., -18.0),
-        4.0,
-        material_factory::get_mirror(),
-    );
+    let mut objects = vec![
+        Sphere::new(
+            Vec3::new(-3.0, 0., -16.0),
+            2.0,
+            material_factory::get_dark_green_plastic(),
+        ),
+        Sphere::new(
+            Vec3::new(-1.0, -1.5, -12.0),
+            2.0,
+            material_factory::get_glass(),
+        ),
+        Sphere::new(
+            Vec3::new(1.5, -0.5, -18.0),
+            3.0,
+            material_factory::get_red_rubber(),
+        ),
+        Sphere::new(
+            Vec3::new(7., 5., -18.0),
+            4.0,
+            material_factory::get_mirror(),
+        )
+    ];
 
-    let mut objects = vec![test_sphere, test_sphere2, test_sphere3, test_sphere4];
     objects.sort_by(|sphere1, sphere2| {
         let a = sphere1.center.minus(&camera.position).length();
         let b = sphere2.center.minus(&camera.position).length();
