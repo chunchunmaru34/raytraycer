@@ -30,8 +30,7 @@ fn cast_ray(ray: &mut Ray, scene: &Scene, depth: usize) -> RGB {
         return scene.options.background_color.clone();
     }
 
-    let mut pairs: Vec<(f32, usize)> = scene
-        .objects
+    let mut pairs: Vec<(f32, usize)> = scene.objects
         .iter()
         .enumerate()
         .map(|pair| (pair.1.center.minus(&ray.origin).length(), pair.0))

@@ -14,6 +14,9 @@ use scene::{Canvas, Scene, SceneOptions};
 use std::time::Instant;
 use utils::material_factory;
 use utils::rgb::RGB;
+use std::thread;
+use std::sync::Arc;
+
 
 use image::ImageBuffer;
 
@@ -30,7 +33,7 @@ fn main() -> Result<(), String> {
 }
 
 fn run_static() {
-    let scene = create_scene();
+    let scene = Arc::new(create_scene());
     let start = Instant::now();
 
     render_static(&scene);
@@ -38,13 +41,37 @@ fn run_static() {
     println!("time per frame:{0}ms", duration.as_millis());
 }
 
-fn render_static(scene: &Scene) {
-    let img = ImageBuffer::from_fn(WIDTH as u32, HEIGHT as u32, |x, y| {
-        let color = renderer::render_pixel(x as f32, y as f32, scene);
-        image::Rgb([color.r, color.g, color.b])
-    });
+fn render_static(scene: &Arc<Scene>) {
+    let mut handles = Vec::new();
 
-    img.save("test.png").unwrap();
+    for i in 0..4 {
+        println!("{}", i);
+        let copy = scene.clone();
+        let start = i * HEIGHT / 4;
+        let end = start + HEIGHT / 4;
+
+        let handle = thread::spawn(move || {
+            for y in start..end {
+                for x in 0..WIDTH {
+                    println!("x: {}, y: {}", x, y);
+                    let color = renderer::render_pixel(x as f32, y as f32, &copy);
+                }
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    
+    // let img = ImageBuffer::from_fn(WIDTH as u32, HEIGHT as u32, |x, y| {
+    //     let color = renderer::render_pixel(x as f32, y as f32, scene);
+    //     image::Rgb([color.r, color.g, color.b])
+    // });
+
+    // img.save("test.png").unwrap();
 }
 
 fn create_scene() -> Scene {
