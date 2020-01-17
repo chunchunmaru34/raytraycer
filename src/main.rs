@@ -11,17 +11,16 @@ use geometry::vec3::Vec3;
 use scene::camera::Camera;
 use scene::light::Light;
 use scene::{Canvas, Scene, SceneOptions};
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Instant;
 use utils::material_factory;
 use utils::rgb::RGB;
-use std::thread;
-use std::sync::Arc;
 
+use image::{ImageBuffer, Rgb};
 
-use image::ImageBuffer;
-
-const HEIGHT: usize = 1080;
-const WIDTH: usize = 1920;
+const HEIGHT: usize = 720;
+const WIDTH: usize = 1280;
 const FOV: f32 = 3.14 / 3.;
 const BACKGROUND_COLOR: RGB = RGB::new(178, 178, 178);
 const MAX_REFLECTIONS_ALLOWED: usize = 4;
@@ -43,35 +42,39 @@ fn run_static() {
 
 fn render_static(scene: &Arc<Scene>) {
     let mut handles = Vec::new();
+    let cpus_count = num_cpus::get();
+    let chunk_length = HEIGHT / cpus_count;
 
-    for i in 0..4 {
-        println!("{}", i);
-        let copy = scene.clone();
-        let start = i * HEIGHT / 4;
-        let end = start + HEIGHT / 4;
+    let buffer_mutex: Arc<Mutex<ImageBuffer<Rgb<u8>, Vec<u8>>>> =
+        Arc::new(Mutex::new(ImageBuffer::new(WIDTH as u32, HEIGHT as u32)));
+
+    (0..cpus_count).for_each(|cpu_num| {
+        let (scene, buffer_mutex) = (scene.clone(), buffer_mutex.clone());
+
+        let start = cpu_num * chunk_length;
+        let end = start + chunk_length;
 
         let handle = thread::spawn(move || {
             for y in start..end {
                 for x in 0..WIDTH {
-                    println!("x: {}, y: {}", x, y);
-                    let color = renderer::render_pixel(x as f32, y as f32, &copy);
+                    let color = renderer::render_pixel(x as f32, y as f32, &scene);
+                    let pixel = Rgb(color.as_array());
+                    buffer_mutex
+                        .lock()
+                        .unwrap()
+                        .put_pixel(x as u32, y as u32, pixel);
                 }
             }
         });
 
         handles.push(handle);
-    }
+    });
 
     for handle in handles {
         handle.join().unwrap();
     }
-    
-    // let img = ImageBuffer::from_fn(WIDTH as u32, HEIGHT as u32, |x, y| {
-    //     let color = renderer::render_pixel(x as f32, y as f32, scene);
-    //     image::Rgb([color.r, color.g, color.b])
-    // });
 
-    // img.save("test.png").unwrap();
+    buffer_mutex.lock().unwrap().save("test.png").unwrap();
 }
 
 fn create_scene() -> Scene {
@@ -97,7 +100,7 @@ fn create_scene() -> Scene {
             Vec3::new(7., 5., -18.0),
             4.0,
             material_factory::get_mirror(),
-        )
+        ),
     ];
 
     objects.sort_by(|sphere1, sphere2| {

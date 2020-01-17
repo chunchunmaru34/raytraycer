@@ -23,6 +23,10 @@ impl RGB {
         Vec3::new(self.r as f32, self.g as f32, self.b as f32)
     }
 
+    pub fn as_array(&self) -> [u8; 3] {
+        [self.r, self.g, self.b]
+    }
+
     pub fn clone(&self) -> Self {
         Self::new(self.r, self.g, self.b)
     }
