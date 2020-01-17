@@ -27,7 +27,15 @@ impl RGB {
         [self.r, self.g, self.b]
     }
 
-    pub fn clone(&self) -> Self {
-        Self::new(self.r, self.g, self.b)
+    // pub fn clone(&self) -> Self {
+    //     Self::new(self.r, self.g, self.b)
+    // }
+}
+
+impl Copy for RGB {}
+
+impl Clone for RGB {
+    fn clone(&self) -> Self {
+        *self
     }
 }

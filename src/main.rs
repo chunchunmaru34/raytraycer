@@ -5,6 +5,7 @@ mod geometry;
 mod renderer;
 mod scene;
 mod utils;
+mod sdl;
 
 use geometry::sphere::Sphere;
 use geometry::vec3::Vec3;
@@ -26,7 +27,8 @@ const BACKGROUND_COLOR: RGB = RGB::new(178, 178, 178);
 const MAX_REFLECTIONS_ALLOWED: usize = 4;
 
 fn main() -> Result<(), String> {
-    run_static();
+    // run_static();
+    run_dynamic();
 
     Ok(())
 }
@@ -75,6 +77,10 @@ fn render_static(scene: &Arc<Scene>) {
     }
 
     buffer_mutex.lock().unwrap().save("test.png").unwrap();
+}
+
+fn run_dynamic() {
+    sdl::run_sdl(create_scene());
 }
 
 fn create_scene() -> Scene {
