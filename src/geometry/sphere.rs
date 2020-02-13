@@ -6,6 +6,8 @@ pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
     pub material: Material,
+
+    radius_sqr: f32,
 }
 
 impl Sphere {
@@ -14,6 +16,7 @@ impl Sphere {
             center,
             radius,
             material,
+            radius_sqr: radius * radius
         }
     }
 
@@ -29,11 +32,11 @@ impl Sphere {
 
         let projection = c.dot_product(&c) - tca * tca;
 
-        if projection > self.radius * self.radius {
+        if projection > self.radius_sqr {
             return false;
         }
 
-        let thc = (self.radius * self.radius - projection).sqrt();
+        let thc = (self.radius_sqr - projection).sqrt();
         let mut t0 = tca - thc;
         let t1 = tca + thc;
         if t0 < 0. {

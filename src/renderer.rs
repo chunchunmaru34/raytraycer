@@ -5,6 +5,67 @@ use crate::scene::Scene;
 use crate::utils;
 use crate::utils::rgb::RGB;
 
+use image::{ImageBuffer, Rgb};
+
+use std::sync::{Arc};
+use std::thread;
+
+pub fn render_frame(scene: &Arc<Scene>) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+    let (width, height) = (scene.canvas.width, scene.canvas.height);
+    let cpus_count = num_cpus::get();
+    let chunk_length = height / cpus_count;
+    
+    let mut handles = Vec::new();
+
+    (0..cpus_count).for_each(|cpu_num| {
+        let scene = scene.clone();
+
+        let mut chunk = Vec::with_capacity(chunk_length);
+        let start = cpu_num * chunk_length;
+        let end = start + chunk_length;
+
+        let handle = thread::spawn(move || {
+            for y in start..end {
+                let mut row = Vec::with_capacity(scene.canvas.width);
+
+                for x in 0..width {
+                    let color = render_pixel(x as f32, y as f32, &scene);
+                    row.push(color);
+                }
+
+                chunk.push(row);
+            }
+
+            (cpu_num, chunk)
+        });
+
+        handles.push(handle);
+    });
+
+
+    let mut chunks = Vec::with_capacity(cpus_count);
+    for handle in handles {
+        chunks.push(handle.join().unwrap());
+    }
+
+    let mut buffer = ImageBuffer::new(width as u32, height as u32);
+
+    for (cpu_num, chunk) in chunks {
+        let start = cpu_num * chunk_length;
+        let end = start + chunk_length;
+
+        for y in start..end {
+            for x in 0..width {
+                let color = chunk.get(y - start).unwrap().get(x).unwrap();
+                let pixel = Rgb(color.as_array());
+                buffer.put_pixel(x as u32, y as u32, pixel);
+            }
+        }
+    }
+
+    buffer
+}
+
 pub fn render_pixel(x: f32, y: f32, scene: &Scene) -> RGB {
     let direction = Vec3::new(
         (x + 0.5) - scene.canvas.width as f32 / 2.,
@@ -30,8 +91,7 @@ fn cast_ray(ray: &mut Ray, scene: &Scene, depth: usize) -> RGB {
         return scene.options.background_color.clone();
     }
 
-    let mut pairs: Vec<(f32, usize)> = scene
-        .objects
+    let mut pairs: Vec<(f32, usize)> = scene.objects
         .iter()
         .enumerate()
         .map(|pair| (pair.1.center.minus(&ray.origin).length(), pair.0))
