@@ -1,12 +1,11 @@
+extern crate image;
 extern crate sdl2;
 
 use crate::geometry::vec3::Vec3;
 use crate::renderer;
 use crate::scene::Scene;
-use crate::utils::rgb::RGB;
 
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use sdl2::event::Event;
@@ -76,62 +75,20 @@ pub fn run_sdl(mut scene: Scene) {
 }
 
 fn render_parallel(scene: Scene, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) -> Scene {
-    let mut handles = Vec::new();
-    let cpus_count = num_cpus::get();
-    let chunks_arc = Arc::new(Mutex::new(Vec::with_capacity(cpus_count)));
-    // let mut chunks = Vec::with_capacity(cpus_count);
-    let chunk_length = scene.canvas.height / cpus_count;
-
     let (width, height) = (scene.canvas.width, scene.canvas.height);
-
     let scene_arc = Arc::new(scene);
 
-    (0..cpus_count).for_each(|cpu_num| {
-        let (chunks, scene) = (chunks_arc.clone(), scene_arc.clone());
-
-        let mut chunk = Vec::with_capacity(chunk_length);
-        let start = cpu_num * chunk_length;
-        let end = start + chunk_length;
-
-        let handle = thread::spawn(move || {
-            for y in start..end {
-                let mut row = Vec::with_capacity(scene.canvas.width);
-
-                for x in 0..scene.canvas.width {
-                    let color = renderer::render_pixel(x as f32, y as f32, &scene);
-                    row.push(color);
-                }
-
-                chunk.push(row);
-            }
-
-            chunks.lock().unwrap().push((cpu_num, chunk));
-        });
-
-        handles.push(handle);
-    });
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    let chunks_mutex = Arc::try_unwrap(chunks_arc).ok().unwrap();
-    let mut chunks_order = chunks_mutex.lock().unwrap();
-    chunks_order.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-    let chunks: Vec<Vec<RGB>> = chunks_order.iter().fold(Vec::new(), |acc, item| {
-        [acc.as_slice(), item.1.as_slice()].concat()
-    });
+    let buffer = renderer::render_frame(&scene_arc);
 
     for y in 0..height {
         for x in 0..width {
-            let color = chunks.get(y).unwrap().get(x).unwrap();
-            canvas.set_draw_color(Color::RGB(color.r, color.g, color.b));
+            let color = buffer.get_pixel(x as u32, y as u32);
+            canvas.set_draw_color(Color::RGB(color[0], color[1], color[2]));
             canvas
                 .draw_point(sdl2::rect::Point::new(x as i32, y as i32))
                 .unwrap();
         }
     }
-
     canvas.present();
     Arc::try_unwrap(scene_arc).ok().unwrap()
 }
