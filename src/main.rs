@@ -12,8 +12,10 @@ use geometry::vec3::Vec3;
 use scene::camera::Camera;
 use scene::light::Light;
 use scene::{Canvas, Scene, SceneOptions};
+use std::env;
 use std::sync::Arc;
 use std::time::Instant;
+use threadpool::ThreadPool;
 use utils::material_factory;
 use utils::rgb::RGB;
 
@@ -24,29 +26,41 @@ const BACKGROUND_COLOR: RGB = RGB::new(178, 178, 178);
 const MAX_REFLECTIONS_ALLOWED: usize = 4;
 
 fn main() -> Result<(), String> {
-    // run_static();
-    run_dynamic();
+    let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
+
+    let is_static_render = args.contains(&String::from("-static"));
+    let disable_parallelization = args.contains(&String::from("-no-parallel"));
+
+    if is_static_render {
+        run_static(disable_parallelization);
+    } else {
+        run_dynamic(disable_parallelization);
+    }
 
     Ok(())
 }
 
-fn run_static() {
+fn run_static(disable_parallelization: bool) {
     let scene = Arc::new(create_scene());
     let start = Instant::now();
 
-    render_static(&scene);
+    render_static(&scene, disable_parallelization);
     let duration = start.elapsed();
     println!("time per frame:{0}ms", duration.as_millis());
 }
 
-fn render_static(scene: &Arc<Scene>) {
-    let buffer = renderer::render_frame(scene);
+fn render_static(scene: &Arc<Scene>, no_parallel: bool) {
+    let cpus_count = if no_parallel { 1 } else { num_cpus::get() };
+    let pool = ThreadPool::new(cpus_count);
+
+    let buffer = renderer::render_frame(scene, &pool);
 
     buffer.save("test.png").unwrap();
 }
 
-fn run_dynamic() {
-    sdl::run_sdl(create_scene());
+fn run_dynamic(disable_parallelization: bool) {
+    sdl::run_sdl(create_scene(), disable_parallelization);
 }
 
 fn create_scene() -> Scene {

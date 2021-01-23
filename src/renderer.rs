@@ -6,25 +6,26 @@ use crate::utils;
 use crate::utils::rgb::RGB;
 
 use image::{ImageBuffer, Rgb};
+use std::sync::mpsc::channel;
+use std::sync::Arc;
+use threadpool::ThreadPool;
 
-use std::sync::{Arc};
-use std::thread;
-
-pub fn render_frame(scene: &Arc<Scene>) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+pub fn render_frame(scene: &Arc<Scene>, pool: &ThreadPool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     let (width, height) = (scene.canvas.width, scene.canvas.height);
     let cpus_count = num_cpus::get();
     let chunk_length = height / cpus_count;
-    
-    let mut handles = Vec::new();
 
-    (0..cpus_count).for_each(|cpu_num| {
+    let (tx, rx) = channel();
+
+    (0..cpus_count).for_each(|worker_num| {
         let scene = scene.clone();
+        let tx = tx.clone();
 
         let mut chunk = Vec::with_capacity(chunk_length);
-        let start = cpu_num * chunk_length;
+        let start = worker_num * chunk_length;
         let end = start + chunk_length;
 
-        let handle = thread::spawn(move || {
+        pool.execute(move || {
             for y in start..end {
                 let mut row = Vec::with_capacity(scene.canvas.width);
 
@@ -36,22 +37,15 @@ pub fn render_frame(scene: &Arc<Scene>) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
                 chunk.push(row);
             }
 
-            (cpu_num, chunk)
+            tx.send((worker_num, chunk))
+                .expect("Something went wrong while calculating chunk in pool");
         });
-
-        handles.push(handle);
     });
-
-
-    let mut chunks = Vec::with_capacity(cpus_count);
-    for handle in handles {
-        chunks.push(handle.join().unwrap());
-    }
 
     let mut buffer = ImageBuffer::new(width as u32, height as u32);
 
-    for (cpu_num, chunk) in chunks {
-        let start = cpu_num * chunk_length;
+    for (worker_num, chunk) in rx.iter().take(cpus_count) {
+        let start = worker_num * chunk_length;
         let end = start + chunk_length;
 
         for y in start..end {
@@ -91,7 +85,8 @@ fn cast_ray(ray: &mut Ray, scene: &Scene, depth: usize) -> RGB {
         return scene.options.background_color.clone();
     }
 
-    let mut pairs: Vec<(f32, usize)> = scene.objects
+    let mut pairs: Vec<(f32, usize)> = scene
+        .objects
         .iter()
         .enumerate()
         .map(|pair| (pair.1.center.minus(&ray.origin).length(), pair.0))

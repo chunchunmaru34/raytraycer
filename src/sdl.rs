@@ -7,6 +7,7 @@ use crate::scene::Scene;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use threadpool::ThreadPool;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -39,9 +40,12 @@ fn init_sdl(height: u32, width: u32) -> (Canvas<Window>, sdl2::Sdl) {
     (canvas, sdl_context)
 }
 
-pub fn run_sdl(mut scene: Scene) {
+pub fn run_sdl(mut scene: Scene, no_parallel: bool) {
     let (mut canvas, sdl_context) = init_sdl(scene.canvas.height as u32, scene.canvas.width as u32);
     let mut event_pump = sdl_context.event_pump().unwrap();
+
+    let cpus_count = if no_parallel { 1 } else { num_cpus::get() };
+    let pool = ThreadPool::new(cpus_count);
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -58,8 +62,7 @@ pub fn run_sdl(mut scene: Scene) {
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
 
         let start = Instant::now();
-        // scene = render(scene, &mut canvas);
-        scene = render_parallel(scene, &mut canvas);
+        scene = render(scene, &mut canvas, &pool);
         let duration = start.elapsed();
 
         println!(
@@ -67,18 +70,22 @@ pub fn run_sdl(mut scene: Scene) {
             1000. / duration.as_millis() as f32,
             duration.as_millis()
         );
-        println!(
-            "x:{}, y:{}, z:{}",
-            scene.camera.position.x, scene.camera.position.y, scene.camera.position.z
-        );
+        // println!(
+        //     "x:{}, y:{}, z:{}",
+        //     scene.camera.position.x, scene.camera.position.y, scene.camera.position.z
+        // );
     }
 }
 
-fn render_parallel(scene: Scene, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) -> Scene {
+fn render(
+    scene: Scene,
+    canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+    pool: &ThreadPool,
+) -> Scene {
     let (width, height) = (scene.canvas.width, scene.canvas.height);
     let scene_arc = Arc::new(scene);
 
-    let buffer = renderer::render_frame(&scene_arc);
+    let buffer = renderer::render_frame(&scene_arc, &pool);
 
     for y in 0..height {
         for x in 0..width {
@@ -91,22 +98,6 @@ fn render_parallel(scene: Scene, canvas: &mut sdl2::render::Canvas<sdl2::video::
     }
     canvas.present();
     Arc::try_unwrap(scene_arc).ok().unwrap()
-}
-
-fn render(scene: Scene, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) -> Scene {
-    for y in 0..scene.canvas.height {
-        for x in 0..scene.canvas.width {
-            let color = renderer::render_pixel(x as f32, y as f32, &scene);
-            canvas.set_draw_color(Color::RGB(color.r, color.g, color.b));
-            canvas
-                .draw_point(sdl2::rect::Point::new(x as i32, y as i32))
-                .unwrap();
-        }
-    }
-
-    canvas.present();
-
-    scene
 }
 
 fn handle_event(event: Event, scene: &mut Scene) {
